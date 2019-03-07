@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-func TestPostJSON(t *testing.T) {
-
-}
-
 func Test_jsonLibrary_GetJSON(t *testing.T) {
 	// mock
 	type person struct {
@@ -28,8 +24,9 @@ func Test_jsonLibrary_GetJSON(t *testing.T) {
 		_client *http.Client
 	}
 	type args struct {
-		url string
-		res *person
+		url     string
+		headers map[string]string
+		res     *person
 	}
 	tests := []struct {
 		name      string
@@ -56,7 +53,7 @@ func Test_jsonLibrary_GetJSON(t *testing.T) {
 			m := &jsonLibrary{
 				_client: tt.fields._client,
 			}
-			if err := m.GetJSON(tt.args.url, tt.args.res); (err != nil) != tt.wantErr {
+			if err := m.GetJSON(tt.args.url, tt.args.headers, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("jsonLibrary.GetJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.args.res.Name != tt.wantValue.Name {

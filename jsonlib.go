@@ -12,8 +12,8 @@ import (
 
 // JSONLibrary json library interface
 type JSONLibrary interface {
-	GetJSON(url string, res interface{}) error
-	PostJSON(url string, req interface{}, res interface{}) error
+	GetJSON(url string, headers map[string]string, res interface{}) error
+	PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 }
 
 type jsonLibrary struct {
@@ -34,13 +34,13 @@ func New(client *http.Client) JSONLibrary {
 }
 
 // GetJSON ...
-func GetJSON(url string, res interface{}) error {
-	return Default.GetJSON(url, res)
+func GetJSON(url string, headers map[string]string, res interface{}) error {
+	return Default.GetJSON(url, headers, res)
 }
 
 // PostJSON ...
-func PostJSON(url string, req interface{}, res interface{}) error {
-	return Default.PostJSON(url, req, res)
+func PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return Default.PostJSON(url, headers, req, res)
 }
 
 func (m *jsonLibrary) getClient() *http.Client {
@@ -51,9 +51,20 @@ func (m *jsonLibrary) getClient() *http.Client {
 }
 
 // GetJSON ...
-func (m *jsonLibrary) GetJSON(url string, res interface{}) error {
+func (m *jsonLibrary) GetJSON(url string, headers map[string]string, res interface{}) error {
 	client := m.getClient()
-	resp, err := client.Get(url)
+	// new request
+	reqt, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return errors.Wrapf(err, "jsonlib: failed to create request. url:'%s'", url)
+	}
+	// set header
+	if headers != nil {
+		for key, value := range headers {
+			reqt.Header.Set(key, value)
+		}
+	}
+	resp, err := client.Do(reqt)
 	if err != nil {
 		return errors.Wrap(err, "jsonlib: failed to get json")
 	}
@@ -67,10 +78,28 @@ func (m *jsonLibrary) GetJSON(url string, res interface{}) error {
 }
 
 // PostJSON ...
-func (m *jsonLibrary) PostJSON(url string, req interface{}, res interface{}) error {
+func (m *jsonLibrary) PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	// get client
 	client := m.getClient()
-	data, _ := json.Marshal(req)
-	resp, err := client.Post(url, "application/json", bytes.NewBuffer(data))
+	// get post body
+	data, err := json.Marshal(req)
+	if err != nil {
+		return errors.Wrap(err, "jsonlib: failed to marshal request")
+	}
+	// new request
+	reqt, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return errors.Wrapf(err, "jsonlib: failed to create request. url:'%s'", url)
+	}
+	// set header
+	reqt.Header.Set("Content-Type", "application/json")
+	if headers != nil {
+		for key, value := range headers {
+			reqt.Header.Set(key, value)
+		}
+	}
+	// send the request
+	resp, err := client.Do(reqt)
 	if err != nil {
 		return errors.Wrapf(err, "jsonlib: failed to post json, url:%s", url)
 	}
