@@ -77,7 +77,8 @@ func (m *jsonLibrary) PostJSON(url string, req interface{}, res interface{}) err
 	defer resp.Body.Close()
 	// check status
 	if (resp.StatusCode/100)*100 != http.StatusOK {
-		return fmt.Errorf("jsonlib: failed to postJSON. status:'%s', url:'%s'", resp.Status, url)
+		return fmt.Errorf("jsonlib: failed to postJSON. status:'%s', url:'%s', data:'%s'",
+			resp.Status, url, string(data))
 	}
 	// decode
 	if err := json.NewDecoder(resp.Body).Decode(res); err != nil {
