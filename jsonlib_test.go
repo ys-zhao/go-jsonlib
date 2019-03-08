@@ -5,7 +5,37 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestGetJSON(t *testing.T) {
+	type response struct {
+		Items []struct {
+			Name string `json:"name"`
+		} `json:"items"`
+	}
+	url := "https://api.github.com/search/repositories?q=golang+jsonlib"
+	var res response
+	err := GetJSON(url, nil, &res)
+	// check
+	assert.Nil(t, err)
+	assert.Equal(t, "jsonlib", res.Items[0].Name)
+}
+
+func TestRequestJSON(t *testing.T) {
+	type response struct {
+		Items []struct {
+			Name string `json:"name"`
+		} `json:"items"`
+	}
+	url := "https://api.github.com/search/repositories?q=golang+jsonlib"
+	var res response
+	err := RequestJSON("GET", url, nil, nil, &res)
+	// check
+	assert.Nil(t, err)
+	assert.Equal(t, "jsonlib", res.Items[0].Name)
+}
 
 func Test_jsonLibrary_GetJSON(t *testing.T) {
 	// mock

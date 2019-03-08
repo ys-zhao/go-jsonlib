@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -12,8 +13,10 @@ import (
 
 // JSONLibrary json library interface
 type JSONLibrary interface {
+	RequestJSON(method, url string, headers map[string]string, req interface{}, res interface{}) error
 	GetJSON(url string, headers map[string]string, res interface{}) error
 	PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error
+	DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 }
 
 type jsonLibrary struct {
@@ -33,6 +36,11 @@ func New(client *http.Client) JSONLibrary {
 	}
 }
 
+// RequestJSON ...
+func RequestJSON(method, url string, headers map[string]string, req interface{}, res interface{}) error {
+	return Default.RequestJSON(method, url, headers, req, res)
+}
+
 // GetJSON ...
 func GetJSON(url string, headers map[string]string, res interface{}) error {
 	return Default.GetJSON(url, headers, res)
@@ -43,6 +51,11 @@ func PostJSON(url string, headers map[string]string, req interface{}, res interf
 	return Default.PostJSON(url, headers, req, res)
 }
 
+// DeleteJSON ...
+func DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return Default.DeleteJSON(url, headers, req, res)
+}
+
 func (m *jsonLibrary) getClient() *http.Client {
 	if m._client != nil {
 		return m._client
@@ -50,46 +63,24 @@ func (m *jsonLibrary) getClient() *http.Client {
 	return &http.Client{Timeout: 30 * time.Second}
 }
 
-// GetJSON ...
-func (m *jsonLibrary) GetJSON(url string, headers map[string]string, res interface{}) error {
-	client := m.getClient()
-	// new request
-	reqt, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return errors.Wrapf(err, "jsonlib: failed to create request. url:'%s'", url)
-	}
-	// set header
-	if headers != nil {
-		for key, value := range headers {
-			reqt.Header.Set(key, value)
-		}
-	}
-	resp, err := client.Do(reqt)
-	if err != nil {
-		return errors.Wrap(err, "jsonlib: failed to get json")
-	}
-	defer resp.Body.Close()
-	// check status
-	if (resp.StatusCode/100)*100 != http.StatusOK {
-		return fmt.Errorf("jsonlib: failed to get json. Status='%s', Url='%s'", resp.Status, url)
-	}
-	// json parse
-	return json.NewDecoder(resp.Body).Decode(res)
-}
-
-// PostJSON ...
-func (m *jsonLibrary) PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+// RequestJSON ...
+func (m *jsonLibrary) RequestJSON(method, url string, headers map[string]string, req interface{}, res interface{}) error {
 	// get client
 	client := m.getClient()
-	// get post body
-	data, err := json.Marshal(req)
-	if err != nil {
-		return errors.Wrap(err, "jsonlib: failed to marshal request")
+	// get body
+	var body io.Reader
+	var data []byte
+	if req != nil {
+		data, err := json.Marshal(req)
+		if err != nil {
+			return errors.Wrap(err, "jsonlib: failed to marshal request")
+		}
+		body = bytes.NewBuffer(data)
 	}
 	// new request
-	reqt, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	reqt, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return errors.Wrapf(err, "jsonlib: failed to create request. url:'%s'", url)
+		return errors.Wrapf(err, "jsonlib: failed to new request. url:'%s'", url)
 	}
 	// set header
 	reqt.Header.Set("Content-Type", "application/json")
@@ -110,9 +101,26 @@ func (m *jsonLibrary) PostJSON(url string, headers map[string]string, req interf
 			resp.Status, url, string(data))
 	}
 	// decode
-	if err := json.NewDecoder(resp.Body).Decode(res); err != nil {
-		return errors.Wrapf(err, "jsonlib: failed to decode json, url:%s", url)
+	if res != nil {
+		if err := json.NewDecoder(resp.Body).Decode(res); err != nil {
+			return errors.Wrapf(err, "jsonlib: failed to decode response, url:%s", url)
+		}
 	}
-	// json parse
+	// return
 	return nil
+}
+
+// GetJSON ...
+func (m *jsonLibrary) GetJSON(url string, headers map[string]string, res interface{}) error {
+	return m.RequestJSON("GET", url, headers, nil, res)
+}
+
+// PostJSON ...
+func (m *jsonLibrary) PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return m.RequestJSON("POST", url, headers, req, res)
+}
+
+// DeleteJSON ...
+func (m *jsonLibrary) DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return m.RequestJSON("DELETE", url, headers, req, res)
 }
