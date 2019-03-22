@@ -75,12 +75,13 @@ func (m *jsonLibrary) RequestJSON(method, url string, headers map[string]string,
 	client := m.getClient()
 	// get body
 	var body io.Reader
-	var data []byte
+	var sData string
 	if req != nil {
 		data, err := json.Marshal(req)
 		if err != nil {
 			return errors.Wrap(err, "jsonlib: failed to marshal request")
 		}
+		sData = string(data)
 		body = bytes.NewBuffer(data)
 	}
 	// new request
@@ -104,7 +105,7 @@ func (m *jsonLibrary) RequestJSON(method, url string, headers map[string]string,
 	// check status
 	if (resp.StatusCode/100)*100 != http.StatusOK {
 		return fmt.Errorf("jsonlib: failed to postJSON. status:'%s', url:'%s', data:'%s'",
-			resp.Status, url, string(data))
+			resp.Status, url, sData)
 	}
 	// decode
 	if res != nil {
