@@ -16,6 +16,7 @@ type JSONLibrary interface {
 	RequestJSON(method, url string, headers map[string]string, req interface{}, res interface{}) error
 	GetJSON(url string, headers map[string]string, res interface{}) error
 	PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error
+	PutJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 	DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 }
 
@@ -49,6 +50,11 @@ func GetJSON(url string, headers map[string]string, res interface{}) error {
 // PostJSON ...
 func PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
 	return Default.PostJSON(url, headers, req, res)
+}
+
+// PutJSON ...
+func PutJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return Default.PutJSON(url, headers, req, res)
 }
 
 // DeleteJSON ...
