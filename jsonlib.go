@@ -120,6 +120,11 @@ func (m *jsonLibrary) PostJSON(url string, headers map[string]string, req interf
 	return m.RequestJSON("POST", url, headers, req, res)
 }
 
+// PutJSON ...
+func (m *jsonLibrary) PutJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
+	return m.RequestJSON("PUT", url, headers, req, res)
+}
+
 // DeleteJSON ...
 func (m *jsonLibrary) DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
 	return m.RequestJSON("DELETE", url, headers, req, res)
