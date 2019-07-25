@@ -17,6 +17,7 @@ type JSONLibrary interface {
 	PostJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 	PutJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 	DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error
+	ParseJSONRequest(r *http.Request, res interface{}) error
 }
 
 // Error struct
@@ -77,6 +78,11 @@ func PutJSON(url string, headers map[string]string, req interface{}, res interfa
 // DeleteJSON ...
 func DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
 	return Default.DeleteJSON(url, headers, req, res)
+}
+
+// ParseJSONRequest ...
+func ParseJSONRequest(r *http.Request, res interface{}) error {
+	return Default.ParseJSONRequest(r, res)
 }
 
 func (m *jsonLibrary) getClient() *http.Client {
@@ -191,4 +197,10 @@ func (m *jsonLibrary) PutJSON(url string, headers map[string]string, req interfa
 // DeleteJSON ...
 func (m *jsonLibrary) DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error {
 	return m.RequestJSON("DELETE", url, headers, req, res)
+}
+
+// ParseJSONRequest ...
+func (m *jsonLibrary) ParseJSONRequest(r *http.Request, res interface{}) error {
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(res)
 }
