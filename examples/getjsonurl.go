@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/d3sw/jsonlib"
@@ -13,7 +14,7 @@ func main() {
 		Name string `json:"name"`
 	}
 	if err := jsonlib.GetJSON(url, nil, &res); err != nil {
-		log.Fatal("failed to get json from url", err)
+		log.Fatalf("failed to get json from url '%s'. err: '%v'", url, err)
 	}
-	log.Println("Got user info.", "ID:", res.ID, "name:", res.Name)
+	fmt.Println("Got user info.", "ID:", res.ID, "name:", res.Name)
 }

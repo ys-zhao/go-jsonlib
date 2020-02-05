@@ -8,7 +8,88 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/clbanning/mxj"
+	"github.com/pkg/errors"
 )
+
+// J2XOptions ...
+type J2XOptions struct {
+	WithIndent bool   // well formatted json
+	Prefix     string // the json marshal prefix
+	Indent     string // the json marshal indent
+	RootTag    string // the json root tag
+}
+
+// J2XOption is a function on the options for a json2xml.
+type J2XOption func(*J2XOptions) error
+
+// DefaultJ2XOptions ...
+func DefaultJ2XOptions() *J2XOptions {
+	return &J2XOptions{
+		WithIndent: false,
+		Prefix:     "",
+		Indent:     "\t",
+		RootTag:    "doc",
+	}
+}
+
+// J2XWithIndent ...
+func J2XWithIndent(withIndent bool, prefix, indent string) J2XOption {
+	return func(opts *J2XOptions) error {
+		opts.WithIndent = withIndent
+		opts.Prefix = prefix
+		opts.Indent = indent
+		return nil
+	}
+}
+
+// J2XWithRootTag ...
+func J2XWithRootTag(rootTag string) J2XOption {
+	return func(opts *J2XOptions) error {
+		opts.RootTag = rootTag
+		return nil
+	}
+}
+
+// X2JOptions ...
+type X2JOptions struct {
+	WithIndent bool   // well formatted json
+	Prefix     string // the json marshal prefix
+	Indent     string // the json marshal indent
+	OmitRoot   bool   // omit the root element
+}
+
+// X2JOption is a function on the options for a xml2json.
+type X2JOption func(*X2JOptions) error
+
+// DefaultX2JOptions ...
+func DefaultX2JOptions() *X2JOptions {
+	return &X2JOptions{
+		WithIndent: false,
+		Prefix:     "",
+		Indent:     "\t",
+		OmitRoot:   false,
+	}
+}
+
+// X2JWithIndent ...
+func X2JWithIndent(withIndent bool, prefix, indent string) X2JOption {
+	return func(opts *X2JOptions) error {
+		opts.WithIndent = withIndent
+		opts.Prefix = prefix
+		opts.Indent = indent
+		return nil
+	}
+}
+
+// X2JWithOmitRoot ...
+func X2JWithOmitRoot(omitRoot bool) X2JOption {
+	return func(opts *X2JOptions) error {
+		opts.OmitRoot = omitRoot
+		return nil
+	}
+}
 
 // JSONLibrary json library interface
 type JSONLibrary interface {
@@ -18,6 +99,8 @@ type JSONLibrary interface {
 	PutJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 	DeleteJSON(url string, headers map[string]string, req interface{}, res interface{}) error
 	ParseJSONRequest(r *http.Request, res interface{}) error
+	JSON2XML(jsonStr string, opts ...J2XOption) (string, error)
+	XML2JSON(xmlStr string, opts ...X2JOption) (string, error)
 }
 
 // Error struct
@@ -83,6 +166,16 @@ func DeleteJSON(url string, headers map[string]string, req interface{}, res inte
 // ParseJSONRequest ...
 func ParseJSONRequest(r *http.Request, res interface{}) error {
 	return Default.ParseJSONRequest(r, res)
+}
+
+// JSON2XML ...
+func JSON2XML(jsonStr string, opts ...J2XOption) (string, error) {
+	return Default.JSON2XML(jsonStr, opts...)
+}
+
+// XML2JSON ...
+func XML2JSON(xmlStr string, opts ...X2JOption) (string, error) {
+	return Default.XML2JSON(xmlStr, opts...)
 }
 
 func (m *jsonLibrary) getClient() *http.Client {
@@ -203,4 +296,58 @@ func (m *jsonLibrary) DeleteJSON(url string, headers map[string]string, req inte
 func (m *jsonLibrary) ParseJSONRequest(r *http.Request, res interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(res)
+}
+
+func (m *jsonLibrary) JSON2XML(jsonStr string, newOpts ...J2XOption) (string, error) {
+	// get options
+	opts := DefaultJ2XOptions()
+	for _, opt := range newOpts {
+		opt(opts)
+	}
+	// unmarshal from xml
+	mv, err := mxj.NewMapJson([]byte(jsonStr))
+	if err != nil {
+		return "", errors.Wrap(err, "jsonlib: failed to unmarsh json data")
+	}
+	var xmlData []byte
+	if opts.WithIndent {
+		xmlData, err = mv.XmlIndent(opts.Prefix, opts.Indent, opts.RootTag)
+	} else {
+		xmlData, err = mv.Xml(opts.RootTag)
+	}
+	if err != nil {
+		return "", errors.Wrap(err, "jsonlib: failed to marshal xml data")
+	}
+	return string(xmlData), nil
+}
+
+func (m *jsonLibrary) XML2JSON(xmlStr string, newOpts ...X2JOption) (string, error) {
+	// get options
+	opts := DefaultX2JOptions()
+	for _, opt := range newOpts {
+		opt(opts)
+	}
+	// unmarshal from xml
+	mv, err := mxj.NewMapXml([]byte(xmlStr))
+	if err != nil {
+		return "", errors.Wrap(err, "jsonlib: failed to unmarsh xml data")
+	}
+	// omit the root element
+	if opts.OmitRoot {
+		for _, value := range mv {
+			mv = value.(map[string]interface{})
+			break
+		}
+	}
+	// marsh to json
+	var jsonData []byte
+	if opts.WithIndent {
+		jsonData, err = mv.JsonIndent(opts.Prefix, opts.Indent)
+	} else {
+		jsonData, err = mv.Json()
+	}
+	if err != nil {
+		return "", errors.Wrap(err, "jsonlib: failed to marshal json data")
+	}
+	return string(jsonData), nil
 }
