@@ -1,4 +1,4 @@
-# jsonlib
+# go-jsonlib
 This is a small json library for my own projects, if you are interested in the same functionalities, grab it and help yourself. :)
 
 # Examples
